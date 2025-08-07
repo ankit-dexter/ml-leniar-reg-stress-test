@@ -38,8 +38,8 @@ python fastapi_complete.py
 ```
 
 ### 4. Access the System
-- **Main Dashboard**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
+- **Main Dashboard**: http://localhost:5173/
+- **API Documentation**: http://localhost:5173/docs
 - **Interactive Features**: All available through the web interface
 
 ## 📊 CSV Data Format
