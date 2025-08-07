@@ -1,4 +1,4 @@
-# Southeast Asia GDP Growth Predictor - Complete Edition
+# GDP growth predictor : ML (Leniar regression)
 
 ## 🌟 Features Overview
 
