@@ -12,7 +12,7 @@ function App() {
     <>
       <div style={{ maxWidth: 900, margin: 'auto', padding: 20 }}>
       <h1>Southeast Asia GDP Growth Predictor</h1>
-      <CsvUploader onUploadSuccess={() => setModelReady(true)} />
+      <CsvUploader onUploadSuccess={(isReady: boolean) => setModelReady(isReady)} />
       {modelReady && (
         <>
           <h2>Predictions for Upcoming Years</h2>

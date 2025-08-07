@@ -40,3 +40,13 @@
 .read-the-docs {
   color: #888;
 }
+
+.trainingData {
+  display: flex;
+  gap: 30px;
+}
+
+.white-border {
+  border: 2px solid white;
+  padding: 10px;
+}

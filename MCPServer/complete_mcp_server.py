@@ -251,51 +251,205 @@ class GDPForecastModel:
             return {'success': False, 'error': f'Prediction failed: {str(e)}'}
 
     def generate_prediction_chart(self, predictions: List[Dict]) -> str:
-        """Generate base64 encoded chart for predictions"""
+        """Generate base64 encoded chart with prediction, correlation, and 3D surface WITH TREND LINE"""
         try:
-            plt.figure(figsize=(12, 8))
-
+            # Create figure with mixed 2D and 3D subplots
+            fig = plt.figure(figsize=(20, 12))
+            
+            # ============== TOP LEFT: PREDICTION CHART WITH TREND LINE ==============
+            ax1 = fig.add_subplot(2, 2, 1)
+            
             # Historical data
             if self.training_data is not None:
                 hist_years = self.training_data['Year'].values
                 hist_gdp = self.training_data['Average annual GDP growth (scored 1-5)'].values
-                plt.plot(hist_years, hist_gdp, 'b-o', label='Historical GDP Growth', linewidth=2, markersize=6)
+                ax1.plot(hist_years, hist_gdp, 'b-o', label='Historical GDP Growth', linewidth=2, markersize=6)
 
             # Future predictions
             pred_years = [p['year'] for p in predictions]
             pred_gdp = [p['predicted_gdp_growth'] for p in predictions]
-            plt.plot(pred_years, pred_gdp, 'r--s', label='Predicted GDP Growth', linewidth=2, markersize=8)
+            ax1.plot(pred_years, pred_gdp, 'r--s', label='Predicted GDP Growth', linewidth=2, markersize=8)
 
-            # Styling
-            plt.title('Southeast Asia GDP Growth: Historical vs Predicted', fontsize=16, fontweight='bold')
-            plt.xlabel('Year', fontsize=12)
-            plt.ylabel('GDP Growth Score (1-5)', fontsize=12)
-            plt.legend(fontsize=11)
-            plt.grid(True, alpha=0.3)
-            plt.ylim(1, 5)
-
-            # Add trend line
+            # *** ADD TREND LINE FOR GDP PREDICTIONS ***
             if self.training_data is not None and len(predictions) > 0:
+                # Combine historical and predicted data for overall trend
                 all_years = list(hist_years) + pred_years
                 all_gdp = list(hist_gdp) + pred_gdp
+                
+                # Calculate linear trend (polynomial degree 1)
                 z = np.polyfit(all_years, all_gdp, 1)
-                p = np.poly1d(z)
-                plt.plot(all_years, p(all_years), 'g:', alpha=0.7, label='Trend Line')
+                trend_function = np.poly1d(z)
+                
+                # Generate trend line points
+                trend_line_years = np.linspace(min(all_years), max(all_years), 100)
+                trend_line_gdp = trend_function(trend_line_years)
+                
+                # Plot the trend line
+                ax1.plot(trend_line_years, trend_line_gdp, 'g-', 
+                        label=f'GDP Trend Line (slope: {z[0]:.3f})', 
+                        linewidth=3, alpha=0.8)
+                
+                # Add trend equation as text
+                trend_equation = f'Trend: y = {z[0]:.3f}x + {z[1]:.1f}'
+                ax1.text(0.05, 0.95, trend_equation, 
+                        transform=ax1.transAxes, fontsize=10,
+                        bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.7),
+                        verticalalignment='top')
+                
+                # Calculate trend direction
+                if z[0] > 0.01:
+                    trend_direction = "📈 Increasing"
+                elif z[0] < -0.01:
+                    trend_direction = "📉 Decreasing"
+                else:
+                    trend_direction = "➡️ Stable"
+                    
+                ax1.text(0.05, 0.85, f'Trend: {trend_direction}', 
+                        transform=ax1.transAxes, fontsize=10,
+                        bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.7),
+                        verticalalignment='top')
 
+            # Styling for prediction chart
+            ax1.set_title('GDP Growth: Historical vs Predicted (with Trend)', fontsize=14, fontweight='bold')
+            ax1.set_xlabel('Year', fontsize=12)
+            ax1.set_ylabel('GDP Growth Score (1-5)', fontsize=12)
+            ax1.legend(fontsize=10)
+            ax1.grid(True, alpha=0.3)
+            ax1.set_ylim(1, 5)
+
+            # ============== TOP RIGHT: CORRELATION HEATMAP ==============
+            ax2 = fig.add_subplot(2, 2, 2)
+            
+            if self.training_data is not None:
+                # Create extended dataset including predictions for correlation
+                extended_data = self.training_data.copy()
+                
+                # Add prediction data to the dataset
+                for pred in predictions:
+                    new_row = {
+                        'Year': pred['year'],
+                        'Average annual rate of growth of exports (scored 1-5)': pred['Average annual rate of growth of exports (scored 1-5)'],
+                        'Inward FDI flows (% of fixed investment)': pred['Inward FDI flows (% of fixed investment)'],
+                        'CO2 emissions: Oil (% change y/y)': pred['CO2 emissions: Oil (% change y/y)'],
+                        'Average annual GDP growth (scored 1-5)': pred['predicted_gdp_growth']
+                    }
+                    extended_data = pd.concat([extended_data, pd.DataFrame([new_row])], ignore_index=True)
+                
+                # Select columns for correlation
+                corr_columns = [
+                    'Average annual rate of growth of exports (scored 1-5)',
+                    'Inward FDI flows (% of fixed investment)',
+                    'CO2 emissions: Oil (% change y/y)',
+                    'Average annual GDP growth (scored 1-5)'
+                ]
+                
+                corr_matrix = extended_data[corr_columns].corr()
+                
+                # Create heatmap
+                im = ax2.imshow(corr_matrix, cmap='coolwarm', aspect='auto', vmin=-1, vmax=1)
+                
+                # Add correlation values as text
+                for i in range(len(corr_matrix.columns)):
+                    for j in range(len(corr_matrix.columns)):
+                        text = ax2.text(j, i, f'{corr_matrix.iloc[i, j]:.2f}',
+                                    ha="center", va="center", color="black", fontweight='bold', fontsize=10)
+                
+                # Shortened labels
+                short_labels = ['Export Growth', 'FDI Flows', 'CO2 Change', 'GDP Growth']
+                ax2.set_xticks(range(len(corr_matrix.columns)))
+                ax2.set_yticks(range(len(corr_matrix.columns)))
+                ax2.set_xticklabels(short_labels, rotation=45, ha='right')
+                ax2.set_yticklabels(short_labels)
+                ax2.set_title('Variables Correlation Matrix\n(Including Predictions)', fontsize=12, fontweight='bold')
+                
+                # Add colorbar
+                cbar = plt.colorbar(im, ax=ax2, shrink=0.8)
+                cbar.set_label('Correlation Coefficient', fontsize=10)
+
+            # ============== BOTTOM: 3D REGRESSION SURFACE ==============
+            ax3 = fig.add_subplot(2, 1, 2, projection='3d')
+            
+            if self.training_data is not None:
+                # Create meshgrid for Export Growth and FDI Flows
+                export_range = np.linspace(1, 5, 25)
+                fdi_range = np.linspace(
+                    self.training_data['Inward FDI flows (% of fixed investment)'].min(),
+                    self.training_data['Inward FDI flows (% of fixed investment)'].max(),
+                    25
+                )
+                X_mesh, Y_mesh = np.meshgrid(export_range, fdi_range)
+                
+                # Fix CO2 at average value for surface plot
+                avg_co2 = self.training_data['CO2 emissions: Oil (% change y/y)'].mean()
+                
+                # Predict GDP for all combinations
+                Z_mesh = np.zeros_like(X_mesh)
+                feature_names = [
+                    'Average annual rate of growth of exports (scored 1-5)',
+                    'Inward FDI flows (% of fixed investment)',
+                    'CO2 emissions: Oil (% change y/y)'
+                ]
+                
+                for i in range(X_mesh.shape[0]):
+                    for j in range(X_mesh.shape[1]):
+                        features_df = pd.DataFrame([[X_mesh[i,j], Y_mesh[i,j], avg_co2]], 
+                                                columns=feature_names)
+                        Z_mesh[i,j] = self.model.predict(features_df)[0]
+                
+                # Plot 3D surface
+                surf = ax3.plot_surface(X_mesh, Y_mesh, Z_mesh, 
+                                    cmap='viridis', alpha=0.8, edgecolor='none')
+                
+                # Add actual historical data points
+                export_data = self.training_data['Average annual rate of growth of exports (scored 1-5)']
+                fdi_data = self.training_data['Inward FDI flows (% of fixed investment)']
+                gdp_data = self.training_data['Average annual GDP growth (scored 1-5)']
+                
+                ax3.scatter(export_data, fdi_data, gdp_data, 
+                        c='red', s=60, alpha=0.9, label='Historical Data', edgecolors='black')
+                
+                # Add predicted future points
+                if len(predictions) > 0:
+                    pred_export = [p['Average annual rate of growth of exports (scored 1-5)'] for p in predictions]
+                    pred_fdi = [p['Inward FDI flows (% of fixed investment)'] for p in predictions]
+                    pred_gdp_vals = [p['predicted_gdp_growth'] for p in predictions]
+                    
+                    ax3.scatter(pred_export, pred_fdi, pred_gdp_vals,
+                            c='yellow', s=80, alpha=1.0, label='Future Predictions', 
+                            marker='^', edgecolors='black')
+                
+                # Styling for 3D plot
+                ax3.set_xlabel('Export Growth Score (1-5)', fontsize=12)
+                ax3.set_ylabel('FDI Flows (% of Investment)', fontsize=12)
+                ax3.set_zlabel('GDP Growth Score (1-5)', fontsize=12)
+                ax3.set_title(f'3D GDP Prediction Surface\n(CO2 emissions fixed at {avg_co2:.1f}%)', 
+                            fontsize=14, fontweight='bold')
+                
+                # Add colorbar
+                cbar3d = plt.colorbar(surf, ax=ax3, shrink=0.6, aspect=20)
+                cbar3d.set_label('Predicted GDP Growth', fontsize=10)
+                
+                ax3.legend()
+                ax3.view_init(elev=20, azim=45)
+
+            # Overall styling
+            fig.suptitle('Complete GDP Analysis: Predictions, Correlations & 3D Model Surface', 
+                        fontsize=18, fontweight='bold', y=0.95)
             plt.tight_layout()
+            plt.subplots_adjust(top=0.90, hspace=0.3, wspace=0.3)
 
             # Convert to base64
             buffer = io.BytesIO()
-            
             plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
             buffer.seek(0)
             chart_base64 = base64.b64encode(buffer.getvalue()).decode()
-            plt.close()
+            plt.close(fig)
 
+            logger.info("Successfully generated comprehensive prediction charts with trend line")
             return chart_base64
 
         except Exception as e:
-            logger.error(f"Chart generation error: {e}")
+            logger.error(f"Comprehensive chart generation error: {e}")
             return ""
 
     def parse_stress_test_query(self, query: str) -> Dict:

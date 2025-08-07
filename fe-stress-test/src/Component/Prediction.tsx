@@ -19,14 +19,14 @@ export default function PredictionChart() {
   useEffect(() => {
     async function fetchData() {
       const result = await getPredictions()
-      console.log(result,"result")
+      console.log(result, "result")
       if (result.chart) {
         setData(result) // expected format: { years: [], actual: [], predicted: [] }
       }
       setLoading(false)
     }
-    if(!data)
-    fetchData()
+    if (!data)
+      fetchData()
   }, [])
 
   if (loading) return <div>Loading prediction chart...</div>
@@ -52,9 +52,9 @@ export default function PredictionChart() {
   }
 
   return <>
-  {data &&     <img
+    {data && <div className='white-border'> <img
       src={`data:image/png;base64,${data.chart}`}
       alt="Plot"
       style={{ maxWidth: '100%' }}
-    />}</>
+    /></div>}</>
 }
