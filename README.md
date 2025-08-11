@@ -24,6 +24,9 @@ source venv/bin/activate
 
 # Install all dependencies
 pip install -r requirements_complete.txt
+
+# start server
+uvicorn fastapi_complete:app --reload
 ```
 
 ### 2. Configuration
