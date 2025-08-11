@@ -453,70 +453,70 @@ class GDPForecastModel:
             return ""
 
     def parse_stress_test_query(self, query: str) -> Dict:
-        """Parse natural language query for stress testing"""
-        query_lower = query.lower()
+            """Parse natural language query for stress testing"""
+            query_lower = query.lower()
 
-        # Extract variables and changes
-        changes = {}
+            # Extract variables and changes
+            changes = {}
 
-        # Export growth patterns
-        export_patterns = [
-            r'export.{0,20}(?:increase|rise|grow|up).{0,20}(\d+(?:\.\d+)?)',
-            r'export.{0,20}(?:decrease|fall|drop|down).{0,20}(\d+(?:\.\d+)?)',
-            r'(\d+(?:\.\d+)?).{0,20}(?:increase|rise|grow|up).{0,20}export',
-            r'(\d+(?:\.\d+)?).{0,20}(?:decrease|fall|drop|down).{0,20}export'
-        ]
+            # Export growth patterns
+            export_patterns = [
+                r'export.{0,20}(?:increase|rise|grow|up).{0,20}(\d+(?:\.\d+)?)',
+                r'export.{0,20}(?:decrease|fall|drop|down).{0,20}(\d+(?:\.\d+)?)',
+                r'(\d+(?:\.\d+)?).{0,20}(?:increase|rise|grow|up).{0,20}export',
+                r'(\d+(?:\.\d+)?).{0,20}(?:decrease|fall|drop|down).{0,20}export'
+            ]
 
-        # FDI patterns
-        fdi_patterns = [
-            r'fdi.{0,20}(?:increase|rise|grow|up).{0,20}(\d+(?:\.\d+)?)',
-            r'fdi.{0,20}(?:decrease|fall|drop|down).{0,20}(\d+(?:\.\d+)?)',
-            r'investment.{0,20}(?:increase|rise|grow|up).{0,20}(\d+(?:\.\d+)?)',
-            r'investment.{0,20}(?:decrease|fall|drop|down).{0,20}(\d+(?:\.\d+)?)'
-        ]
+            # FDI patterns
+            fdi_patterns = [
+                r'fdi.{0,20}(?:increase|rise|grow|up).{0,20}(\d+(?:\.\d+)?)',
+                r'fdi.{0,20}(?:decrease|fall|drop|down).{0,20}(\d+(?:\.\d+)?)',
+                r'investment.{0,20}(?:increase|rise|grow|up).{0,20}(\d+(?:\.\d+)?)',
+                r'investment.{0,20}(?:decrease|fall|drop|down).{0,20}(\d+(?:\.\d+)?)'
+            ]
 
-        # CO2 patterns
-        co2_patterns = [
-            r'co2.{0,20}(?:increase|rise|grow|up).{0,20}(\d+(?:\.\d+)?)',
-            r'co2.{0,20}(?:decrease|fall|drop|down).{0,20}(\d+(?:\.\d+)?)',
-            r'emission.{0,20}(?:increase|rise|grow|up).{0,20}(\d+(?:\.\d+)?)',
-            r'emission.{0,20}(?:decrease|fall|drop|down).{0,20}(\d+(?:\.\d+)?)'
-        ]
+            # CO2 patterns
+            co2_patterns = [
+                r'co2.{0,20}(?:increase|rise|grow|up).{0,20}(\d+(?:\.\d+)?)',
+                r'co2.{0,20}(?:decrease|fall|drop|down).{0,20}(\d+(?:\.\d+)?)',
+                r'emission.{0,20}(?:increase|rise|grow|up).{0,20}(\d+(?:\.\d+)?)',
+                r'emission.{0,20}(?:decrease|fall|drop|down).{0,20}(\d+(?:\.\d+)?)'
+            ]
 
-        # Check for export changes
-        for pattern in export_patterns:
-            match = re.search(pattern, query_lower)
-            if match:
-                value = float(match.group(1))
-                if 'decrease' in pattern or 'fall' in pattern or 'drop' in pattern or 'down' in pattern:
-                    value = -value
-                changes['export_growth'] = value
-                break
+            # Check for export changes
+            for pattern in export_patterns:
+                match = re.search(pattern, query_lower)
+                if match:
+                    value = float(match.group(1))
+                    if 'decrease' in pattern or 'fall' in pattern or 'drop' in pattern or 'down' in pattern:
+                        value = -value
+                    changes['export_growth'] = value
+                    break
 
-        # Check for FDI changes
-        for pattern in fdi_patterns:
-            match = re.search(pattern, query_lower)
-            if match:
-                value = float(match.group(1))
-                if 'decrease' in pattern or 'fall' in pattern or 'drop' in pattern or 'down' in pattern:
-                    value = -value
-                changes['fdi_flows'] = value
-                break
+            # Check for FDI changes
+            for pattern in fdi_patterns:
+                match = re.search(pattern, query_lower)
+                if match:
+                    value = float(match.group(1))
+                    if 'decrease' in pattern or 'fall' in pattern or 'drop' in pattern or 'down' in pattern:
+                        value = -value
+                    changes['fdi_flows'] = value
+                    break
 
-        # Check for CO2 changes
-        for pattern in co2_patterns:
-            match = re.search(pattern, query_lower)
-            if match:
-                value = float(match.group(1))
-                if 'decrease' in pattern or 'fall' in pattern or 'drop' in pattern or 'down' in pattern:
-                    value = -value
-                changes['co2_change'] = value
-                break
+            # Check for CO2 changes
+            for pattern in co2_patterns:
+                match = re.search(pattern, query_lower)
+                if match:
+                    value = float(match.group(1))
+                    if 'decrease' in pattern or 'fall' in pattern or 'drop' in pattern or 'down' in pattern:
+                        value = -value
+                    changes['co2_change'] = value
+                    break
 
-        return changes
+            return changes
 
-    def stress_test_from_query(self, query: str, target_year: int = None) -> Dict:
-        """Perform stress testing based on natural language query"""
+    def stress_test_from_query(self, query: str, target_year: int = None, predictions: List[Dict] = None) -> Dict:
+        """Perform stress testing based on natural language query for a specific year"""
         if not self.is_trained:
             return {'success': False, 'error': 'Model not trained yet'}
 
@@ -530,37 +530,68 @@ class GDPForecastModel:
                     'error': 'Could not understand the stress test query. Try asking like: "What if export growth increases by 1 point?" or "What if FDI decreases by 5%?"'
                 }
 
-            # Get baseline scenario
-            recent_data = self.training_data.tail(5)
-            base_export = recent_data['Average annual rate of growth of exports (scored 1-5)'].mean()
-            base_fdi = recent_data['Inward FDI flows (% of fixed investment)'].mean()
-            base_co2 = recent_data['CO2 emissions: Oil (% change y/y)'].mean()
+            # Use specific year's predicted values as base scenario if provided
+            if target_year and predictions:
+                # Find the prediction for the target year
+                target_prediction = None
+                for pred in predictions:
+                    if pred['year'] == target_year:
+                        target_prediction = pred
+                        break
+                
+                if target_prediction:
+                    # Use the predicted values for the target year as base scenario
+                    base_export = target_prediction['Average annual rate of growth of exports (scored 1-5)']
+                    base_fdi = target_prediction['Inward FDI flows (% of fixed investment)']
+                    base_co2 = target_prediction['CO2 emissions: Oil (% change y/y)']
+                    base_gdp = target_prediction['predicted_gdp_growth']
+                    scenario_source = f"{target_year} Predicted Values"
+                else:
+                    return {
+                        'success': False,
+                        'error': f'No prediction found for year {target_year}. Please generate predictions first.'
+                    }
+            else:
+                # Fall back to recent historical averages (original behavior)
+                recent_data = self.training_data.tail(5)
+                base_export = recent_data['Average annual rate of growth of exports (scored 1-5)'].mean()
+                base_fdi = recent_data['Inward FDI flows (% of fixed investment)'].mean()
+                base_co2 = recent_data['CO2 emissions: Oil (% change y/y)'].mean()
+                
+                # Calculate base GDP prediction
+                features_df = pd.DataFrame([[base_export, base_fdi, base_co2]], columns=self.feature_names)
+                base_gdp = self.model.predict(features_df)[0]
+                scenario_source = "Recent Historical Average"
 
-            # Apply changes
+            # Apply stress changes
             stressed_export = base_export + changes.get('export_growth', 0)
             stressed_fdi = base_fdi + changes.get('fdi_flows', 0)
             stressed_co2 = base_co2 + changes.get('co2_change', 0)
 
-            # Cap values
+            # Cap values within reasonable ranges
             stressed_export = max(1, min(5, stressed_export))
             stressed_fdi = max(0, min(50, stressed_fdi))
             stressed_co2 = max(-30, min(30, stressed_co2))
 
-            # Make predictions
-            base_prediction = self.model.predict([[base_export, base_fdi, base_co2]])[0]
-            stressed_prediction = self.model.predict([[stressed_export, stressed_fdi, stressed_co2]])[0]
+            # Make stressed prediction
+            stressed_features = pd.DataFrame([[stressed_export, stressed_fdi, stressed_co2]], 
+                                           columns=self.feature_names)
+            stressed_prediction = self.model.predict(stressed_features)[0]
 
-            impact = stressed_prediction - base_prediction
+            # Calculate impact
+            impact = stressed_prediction - base_gdp
 
             return {
                 'success': True,
                 'query': query,
+                'target_year': target_year if target_year else "Current/Recent",
+                'scenario_source': scenario_source,
                 'changes_detected': changes,
                 'base_scenario': {
                     'export_growth': round(base_export, 2),
                     'fdi_flows': round(base_fdi, 2),
                     'co2_change': round(base_co2, 2),
-                    'gdp_prediction': round(base_prediction, 2)
+                    'gdp_prediction': round(base_gdp, 2)
                 },
                 'stressed_scenario': {
                     'export_growth': round(stressed_export, 2),
@@ -570,7 +601,7 @@ class GDPForecastModel:
                 },
                 'impact': {
                     'gdp_change': round(impact, 3),
-                    'percentage_change': round((impact / base_prediction) * 100, 2) if base_prediction != 0 else 0,
+                    'percentage_change': round((impact / base_gdp) * 100, 2) if base_gdp != 0 else 0,
                     'impact_description': self._describe_impact(impact)
                 }
             }
@@ -578,6 +609,7 @@ class GDPForecastModel:
         except Exception as e:
             logger.error(f"Stress test error: {e}")
             return {'success': False, 'error': f'Stress test failed: {str(e)}'}
+
 
     def _describe_impact(self, impact: float) -> str:
         """Describe the impact of stress test"""
@@ -742,8 +774,8 @@ class CompleteMCPServer:
                 'error': f'Future predictions failed: {str(e)}'
             }
 
-    async def handle_stress_test_query(self, query: str) -> Dict:
-        """Handle natural language stress testing queries"""
+    async def handle_stress_test_query(self, query: str, target_year: int = None) -> Dict:
+        """Handle natural language stress testing queries for a specific year"""
         try:
             if not self.gdp_model.is_trained:
                 return {
@@ -751,7 +783,28 @@ class CompleteMCPServer:
                     'error': 'Please upload and train the model with CSV data first'
                 }
 
-            result = self.gdp_model.stress_test_from_query(query)
+            # Get predictions if target year is specified
+            predictions = None
+            if target_year:
+                # Generate predictions to get the target year's base scenario
+                last_year = self.gdp_model.training_data['Year'].max()
+                future_years = list(range(last_year + 1, target_year + 1))
+                pred_result = self.gdp_model.predict_future_years(future_years)
+                
+                if pred_result['success']:
+                    predictions = pred_result['predictions']
+                else:
+                    return {
+                        'success': False,
+                        'error': f'Could not generate predictions for {target_year}: {pred_result.get("error", "Unknown error")}'
+                    }
+
+            # Call with keyword arguments
+            result = self.gdp_model.stress_test_from_query(
+                query, 
+                target_year=target_year, 
+                predictions=predictions
+            )
             return result
 
         except Exception as e:

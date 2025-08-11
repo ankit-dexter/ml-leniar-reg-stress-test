@@ -10,7 +10,7 @@ function App() {
   const [modelReady, setModelReady] = useState(false)
   return (
     <>
-      <div style={{ maxWidth: 900, margin: 'auto', padding: 20 }}>
+      <div style={{ maxWidth: 9000, margin: 'auto', padding: 20 }}>
       <h1>GDP growth predictor : ML (Leniar regression)</h1>
       <CsvUploader onUploadSuccess={(isReady: boolean) => setModelReady(isReady)} />
       {modelReady && (

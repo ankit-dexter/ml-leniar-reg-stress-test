@@ -19,14 +19,22 @@ export async function getPredictions() {
   return await response.json()
 }
 
-export async function stressTestQuery(query) {
+export const stressTestQuery = async (requestData) => {
+  // If requestData is a string (old way), convert to object
+  const payload = typeof requestData === 'string' 
+    ? { query: requestData } 
+    : requestData;
+
   const response = await fetch(`${API_BASE}/stress-test`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query }),
-  })
-  return await response.json()
-}
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload)
+  });
+
+  return response.json();
+};
 
 export async function getAIInsights(question) {
   const response = await fetch(`${API_BASE}/ai-question`, {

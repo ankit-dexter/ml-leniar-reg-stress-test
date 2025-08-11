@@ -56,6 +56,7 @@ class FuturePredictionRequest(BaseModel):
 
 class StressTestRequest(BaseModel):
     query: str = Field(..., min_length=10, max_length=200, description="Natural language stress test query")
+    target_year: int = Field(..., ge=2023, le=2030, description="Target year for stress test")
 
 class AIInsightRequest(BaseModel):
     question: str = Field(..., min_length=10, max_length=500, description="Economic question for AI analysis")
@@ -122,21 +123,32 @@ async def predict_future(request: FuturePredictionRequest):
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 @app.post("/api/stress-test")
-async def stress_test_query(request: StressTestRequest):
-    """Handle natural language stress testing"""
+async def stress_test(request: StressTestRequest):
     try:
-        result = await mcp_server.handle_stress_test_query(request.query)
-
+        logger.info(f"Received stress test query: {request}")
+        result = await mcp_server.handle_stress_test_query(
+            query=request.query,
+            target_year=request.target_year
+        )
+        
         if result['success']:
-            return result
+            return {
+                "success": True,
+                "stress_test_result": result,
+                "message": "Stress test completed successfully"
+            }
         else:
-            raise HTTPException(status_code=400, detail=result.get('error', 'Stress test failed'))
-
-    except HTTPException:
-        raise
+            return {
+                "success": False,
+                "error": result['error']
+            }
+            
     except Exception as e:
-        logger.error(f"Stress test error: {e}")
-        raise HTTPException(status_code=500, detail=f"Stress test failed: {str(e)}")
+        logger.error(f"Stress test endpoint error: {e}")
+        return {
+            "success": False,
+            "error": f"Stress test failed: {str(e)}"
+        }
 
 @app.post("/api/ai-insights")
 async def ai_insights(request: AIInsightRequest):
