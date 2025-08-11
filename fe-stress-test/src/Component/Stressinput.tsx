@@ -60,7 +60,7 @@ export default function StressTestInput() {
         // *** FIX: Extract the stress_test_result from the response ***
         setResponse(result.stress_test_result)
       } else {
-        setError(result.error || 'Failed to get stress test result')
+        setError(result.detail[0].msg || 'Failed to get stress test result')
       }
     } catch (e) {
       console.log(e)

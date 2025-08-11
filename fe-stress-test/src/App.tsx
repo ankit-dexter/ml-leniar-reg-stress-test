@@ -17,7 +17,6 @@ function App() {
         <>
           <h2>Predictions for Upcoming Years</h2>
           <PredictionChart />
-          <h2>Stress Testing</h2>
           <StressTestInput />
           <h2>AI Economic Insights</h2>
           <AIInsights />
