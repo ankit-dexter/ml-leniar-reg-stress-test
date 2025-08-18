@@ -920,7 +920,7 @@ class CompleteMCPServer:
 # Example usage
 async def main():
     """Main server demonstration"""
-    PERPLEXITY_API_KEY = "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"   # Replace with actual key
+    PERPLEXITY_API_KEY = "place your key here"   # Replace with actual key
 
     server = CompleteMCPServer(PERPLEXITY_API_KEY)
 
