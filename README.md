@@ -23,7 +23,7 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # Install all dependencies
-pip install -r requirements_complete.txt
+pip install -r requirements.txt
 
 # start server
 uvicorn fastapi_complete:app --reload
