@@ -29,6 +29,8 @@ import matplotlib
 matplotlib.use('Agg')  # Use non-GUI backend
 import base64
 import re
+from pathlib import Path
+from pypdf import PdfReader 
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -632,53 +634,56 @@ class PerplexityClient:
     """Enhanced Perplexity client for economic insights"""
 
     def __init__(self, api_key: str):
-        self.api_key = api_key
         self.base_url = "https://api.perplexity.ai/chat/completions"
         self.headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Accept": "application/json",
         }
 
     async def generate_insights(self, context: Dict, question: str) -> str:
-        """Generate AI insights with comprehensive context"""
-
         system_prompt = f"""
         You are an expert economic analyst specializing in Southeast Asian GDP growth forecasting.
 
         Context Information:
+        - csv_data : {context.get('csv_data', '')}
+        - csv_summary: {context.get('csv_summary', '')}
         - Model Performance: {context.get('model_performance', {})}
         - Recent Predictions: {context.get('predictions', {})}
         - Stress Test Results: {context.get('stress_test', {})}
+        - Additional information: {context.get('pdf', {})}
 
         Guidelines:
-        1. Focus on GDP growth, economic forecasting, and Southeast Asian economies
-        2. Provide specific, data-driven insights using the context
-        3. Explain economic relationships and policy implications
-        4. Keep responses informative but concise (max 400 words)
-        5. If asked about non-economic topics, redirect to economic analysis
-
-        Answer the user's question using this economic context and your expertise.
+        1) Focus on GDP growth and SEA economies
+        2) Use the provided context
+        3) Explain relationships and policy implications
+        4) Max 400 words
+        5) Redirect non-economic topics
         """
-
         payload = {
-            "model": "llama-3.1-sonar-small-128k-online",
+            "model": "sonar",  # start with a widely available model
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": question}
             ],
+            "disable_search": True,
             "temperature": 0.3,
             "max_tokens": 600
         }
-
+        logger.info("Sending request to Perplexity API with payload: %s", payload,self.base_url,self.headers)
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
-                response = await client.post(self.base_url, json=payload, headers=self.headers)
-                response.raise_for_status()
-                result = response.json()
-                return result['choices'][0]['message']['content']
+                resp = await client.post(self.base_url, json=payload, headers=self.headers)
+                if resp.status_code != 200:
+                    # Log details from Perplexity to see if it's entitlement/model/billing
+                    logger.error("Perplexity API error %s: %s", resp.status_code, resp.text)
+                    return f"Perplexity error {resp.status_code}: {resp.text}"
+                data = resp.json()
+                logger.info("Perplexity API response: %s", data)
+                return data["choices"][0]["message"]["content"]
             except Exception as e:
-                logger.error(f"Perplexity API error: {e}")
-                return f"Unable to generate AI insights at this time. Please try again later."
+                logger.exception("Perplexity API exception")
+                return "Unable to generate AI insights at this time."
 
 class CompleteMCPServer:
     """Complete MCP Server with all GDP prediction features"""
@@ -687,12 +692,13 @@ class CompleteMCPServer:
         self.gdp_model = GDPForecastModel()
         self.perplexity = PerplexityClient(perplexity_api_key)
         self.csv_processor = CSVProcessor()
+        self.csv_content = ''
 
     async def handle_csv_upload(self, file_content: bytes, filename: str) -> Dict:
         """Handle CSV upload and model training"""
         try:
             logger.info(f"Processing uploaded CSV file: {filename}")
-
+            self.csv_content = file_content.decode('utf-8')
             # Process CSV file
             success, result = self.csv_processor.process_csv_file(file_content)
             logger.info(f"Processing uploaded CSV file:result {result}")
@@ -814,19 +820,28 @@ class CompleteMCPServer:
                 'error': f'Stress test failed: {str(e)}'
             }
 
-    async def handle_ai_insights(self, question: str, context: Dict = None) -> Dict:
-        """Generate AI insights with full context"""
+    async def handle_ai_insights(self, question: str) -> Dict:
+        """Generate AI insights with full context, including XML file, CSV data, and predicted data."""
         try:
-            # Build comprehensive context
             full_context = {}
 
+            # Load CSV Data if provided
+            csv_data = None
+            if self.csv_content:
+                # Implement your CSV loading logic here, e.g.,
+                csv_data = self.csv_content
+                full_context['csv_data'] = csv_data
+
+            # Additional context info
             if self.gdp_model.is_trained:
                 full_context['model_performance'] = self.gdp_model.model_performance
                 full_context['coefficients'] = self.gdp_model.coefficients
                 full_context['training_period'] = f"{self.gdp_model.training_data['Year'].min()}-{self.gdp_model.training_data['Year'].max()}"
 
-            if context:
-                full_context.update(context)
+            path = Path('Models/macro_relationships_conceptual.pdf')
+            reader = PdfReader(str(path))
+            text = "\n".join([page.extract_text() or "" for page in reader.pages])
+            full_context["pdf"] = text
 
             # Check if question is economics-related
             if not self._is_economics_question(question):
@@ -846,14 +861,13 @@ class CompleteMCPServer:
                 'context_used': bool(full_context),
                 'model_trained': self.gdp_model.is_trained
             }
-
         except Exception as e:
             logger.error(f"AI insights error: {e}")
             return {
                 'success': False,
                 'error': f'AI insights generation failed: {str(e)}'
             }
-
+        
     def get_model_status(self) -> Dict:
         """Get comprehensive model status"""
         if not self.gdp_model.is_trained:

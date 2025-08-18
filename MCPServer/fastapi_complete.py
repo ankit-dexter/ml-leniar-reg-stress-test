@@ -46,7 +46,7 @@ app.add_middleware(
 )
 
 # Initialize Complete MCP Server
-PERPLEXITY_API_KEY = "your-perplexity-api-key-here"  # Replace with actual key
+PERPLEXITY_API_KEY = "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"  # Replace with actual key
 mcp_server = CompleteMCPServer(PERPLEXITY_API_KEY)
 
 # Pydantic models for request validation
@@ -60,7 +60,6 @@ class StressTestRequest(BaseModel):
 
 class AIInsightRequest(BaseModel):
     question: str = Field(..., min_length=10, max_length=500, description="Economic question for AI analysis")
-    context: Optional[Dict] = Field(default=None, description="Additional context for AI")
 
 # Setup templates and static files
 templates = Jinja2Templates(directory="templates")
@@ -155,8 +154,7 @@ async def ai_insights(request: AIInsightRequest):
     """Get AI-powered economic insights"""
     try:
         result = await mcp_server.handle_ai_insights(
-            question=request.question,
-            context=request.context
+            question=request.question
         )
 
         return result

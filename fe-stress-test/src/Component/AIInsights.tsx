@@ -15,14 +15,15 @@ export default function AIInsights() {
     try {
       const result = await getAIInsights(question)
       if (result.success) {
-        setAnswer(result.answer || 'No response received')
+        setAnswer(result.ai_response || 'No response received')
       } else {
         setAnswer('Failed to get AI insights.')
       }
     } catch (e) {
       setAnswer('Error: ' + (e as Error).message)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
@@ -32,11 +33,19 @@ export default function AIInsights() {
         placeholder="Ask economic insights..."
         value={question}
         onChange={(e) => setQuestion(e.target.value)}
+        style={{ width: '70%', marginRight: '10px' }}
       />
-      <button onClick={askQuestion} disabled={loading}>
+      <button onClick={askQuestion} disabled={loading || !question.trim()}>
         {loading ? 'Getting answer...' : 'Ask AI'}
       </button>
-      {answer && <div className="ai-answer">{answer}</div>}
+      {answer && <div className="ai-answer" style={{ 
+        marginTop: '30px', 
+        padding: '20px', 
+        backgroundColor: '#f8f9fa', 
+        borderRadius: '8px',
+        border: '1px solid #e9ecef',
+        color: '#343a40',
+      }}>{answer}</div>}
     </div>
   )
 }
