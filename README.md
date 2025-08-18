@@ -155,7 +155,7 @@ Use `sample_sea_gdp_data.csv` as a template for your own data. This file contain
 
 ## 🌏 Economic Context
 
-This system is specifically designed for Southeast Asian economies and considers:
+This system is specifically designed for GDP growth:
 - Export-driven growth patterns
 - Foreign investment flows
 - Environmental impact on economic growth
