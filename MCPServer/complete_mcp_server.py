@@ -654,10 +654,10 @@ class PerplexityClient:
         - Additional information: {context.get('pdf', {})}
 
         Guidelines:
-        1) Focus on GDP growth and SEA economies
+        1) Focus on GDP growth
         2) Use the provided context
         3) Explain relationships and policy implications
-        4) Max 400 words
+        4) Max 300 words
         5) Redirect non-economic topics
         """
         payload = {
@@ -920,7 +920,7 @@ class CompleteMCPServer:
 # Example usage
 async def main():
     """Main server demonstration"""
-    PERPLEXITY_API_KEY = "your-perplexity-api-key-here"  # Replace with actual key
+    PERPLEXITY_API_KEY = "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"   # Replace with actual key
 
     server = CompleteMCPServer(PERPLEXITY_API_KEY)
 
